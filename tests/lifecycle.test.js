@@ -14,5 +14,6 @@ assert.match(config, /ManualShutdown\s*=\s*(true|false)/);
 assert.match(config, /ManualShutdownFallbackMs\s*=\s*\d+/);
 assert.match(client, /feather-loadscreen:client:character-ready/);
 assert.match(client, /ShutdownLoadingScreenNui\(\)/);
+assert.doesNotMatch(client, /\bShutdownLoadingScreen\(\)/);
 
 console.log('Load-screen lifecycle checks passed.');

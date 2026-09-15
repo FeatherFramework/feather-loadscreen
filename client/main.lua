@@ -4,12 +4,18 @@ local function CloseLoadscreen(reason)
     if closed then return false end
     closed = true
 
-    ShutdownLoadingScreen()
+    -- Cfx has already completed the game loading layer by the time Character
+    -- is ready. With manual NUI shutdown enabled, only close Feather's retained
+    -- loading-screen NUI. Calling ShutdownLoadingScreen here exposes RedM's
+    -- black-and-white bridge/loading imagery between the two UIs.
     ShutdownLoadingScreenNui()
 
+    print(('[feather-loadscreen] load screen closed (%s)'):format(tostring(reason)))
+
     if reason == 'fallback' then
-        print('[feather-loadscreen] manual shutdown fallback reached; load screen closed')
+        print('[feather-loadscreen] manual shutdown fallback reached before Character readiness')
     end
+    TriggerEvent('feather-loadscreen:client:closed', reason)
     return true
 end
 

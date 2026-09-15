@@ -5,7 +5,7 @@ rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aw
 name 'feather-loadscreen'
 author 'Feather Framework'
 description 'A configurable loading screen for Feather Framework.'
-version '0.1.0'
+version '0.1.1'
 
 shared_script 'config.lua'
 client_script 'client/main.lua'

@@ -11,6 +11,8 @@ Run this checklist before release and after changing images or load-screen code.
 - If configured, confirm the default bottom-right CFX busy spinner is hidden.
 - With `ManualShutdown = true`, confirm the screen stays visible through session
   startup and closes when the character-selection menu is usable.
+- Confirm Feather transitions directly from its loadscreen to Character without
+  exposing RedM's black-and-white bridge/loading imagery.
 - Test a new account and confirm it closes when the character-creation menu opens.
 - With `ManualShutdown = false`, confirm it closes when the network session starts.
 - Reconnect once and verify a different starting background can be selected.
