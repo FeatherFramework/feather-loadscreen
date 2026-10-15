@@ -1,5 +1,7 @@
 # feather-loadscreen
 
+Version: **0.1.2**.
+
 A lightweight, dependency-free RedM loading screen.
 
 ## Installation
@@ -54,8 +56,9 @@ Community links are optional, must use HTTPS, and remain hidden when empty.
 Set `buildLabel` to an empty string to hide it. All loading-stage wording can
 be changed under `statusMessages` without editing the UI script.
 
-The load screen handles every event currently documented by CFX: progress,
-log lines, data-file loading, map loading, and client initialization events.
+The load screen handles Cfx progress, log-line, data-file loading, map-loading,
+and client-initialization messages. Asset completion does not establish Character
+readiness or successful spawn.
 
 ### Manual shutdown
 
@@ -119,9 +122,9 @@ Coordinate shared-server reconnect windows; refresh before a manifest restart.
 
 Presentation strings are bounded to 160 Unicode characters, subtitle/tips to 512;
 backgrounds/tips accept the first 64 entries. Invalid labels use defaults.
-Rotation intervals are finite numbers clamped to 5000ñ120000 ms; invalid values
+Rotation intervals are finite numbers clamped to 5000‚Äì120000 ms; invalid values
 use 9000 ms for tips and 12000 ms for backgrounds. Overlay opacity is a finite
-number clamped to 0ñ1. Accent accepts six-digit hex. Background position accepts
+number clamped to 0‚Äì1. Accent accepts six-digit hex. Background position accepts
 up to 64 letters, digits, spaces, dots, percent signs and hyphens.
 Images must match `assets/images/NAME.png|jpg|jpeg|webp|gif` (letters, digits,
 underscore and hyphen in NAME; maximum path length 256). Empty lists use a plain
@@ -136,7 +139,7 @@ stops tip/background rotation; changing the OS preference updates this behavior.
 Links remain optional HTTPS destinations and no remote assets are required.
 
 100% measures Cfx asset loading only. The default completion message is
-ìServer assets loaded; waiting for character menuî and stays visible through later
+‚ÄúServer assets loaded; waiting for character menu‚Äù and stays visible through later
 asset stage messages. Keep custom `statusMessages.complete` equally truthful.
 Browser preview simulates assets and cannot establish Character readiness.
 
