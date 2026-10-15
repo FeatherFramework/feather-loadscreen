@@ -9,6 +9,7 @@ FeatherLoadscreenConfig = {
 
     -- Safety net for manual mode. Once the network session starts, close the
     -- load screen after this many milliseconds if no readiness event arrives.
-    -- Set to 0 to disable the fallback (not recommended).
+    -- Integer 0..600000; invalid values use 120000. Zero disables fallback
+    -- and can retain the overlay indefinitely if Character never signals ready.
     ManualShutdownFallbackMs = 120000,
 }

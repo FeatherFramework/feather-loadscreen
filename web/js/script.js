@@ -1,7 +1,17 @@
 (() => {
     'use strict';
 
-    const config = window.FeatherLoadscreenConfig || {};
+    const config = window.FeatherLoadscreenConfig && typeof window.FeatherLoadscreenConfig === 'object'
+        ? window.FeatherLoadscreenConfig : {};
+    function text(value, fallback = '', limit = 160) {
+        return typeof value === 'string' && value.trim() ? Array.from(value.trim()).slice(0, limit).join('') : fallback;
+    }
+    function interval(value, fallback) {
+        return typeof value === 'number' && Number.isFinite(value) ? Math.min(120000, Math.max(5000, value)) : fallback;
+    }
+    const media = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    let reducedMotion = false;
+    let disposed = false;
     const root = document.documentElement;
     const elements = {
         logo: document.getElementById('server-logo'),
@@ -22,16 +32,16 @@
         ? config.statusMessages
         : {};
     const status = {
-        connecting: configuredStatus.connecting || 'Connecting to server',
-        initializing: configuredStatus.initializing || 'Initializing game',
-        map: configuredStatus.map || 'Preparing the frontier',
-        environment: configuredStatus.environment || 'Setting up the world',
-        session: configuredStatus.session || 'Joining your session',
-        validating: configuredStatus.validating || 'Validating server assets',
-        downloading: configuredStatus.downloading || 'Downloading server assets',
-        dataFiles: configuredStatus.dataFiles || 'Loading game data',
-        scripts: configuredStatus.scripts || 'Starting client systems',
-        complete: configuredStatus.complete || 'Entering the frontier'
+        connecting: text(configuredStatus.connecting, 'Connecting to server'),
+        initializing: text(configuredStatus.initializing, 'Initializing game'),
+        map: text(configuredStatus.map, 'Preparing the frontier'),
+        environment: text(configuredStatus.environment, 'Setting up the world'),
+        session: text(configuredStatus.session, 'Joining your session'),
+        validating: text(configuredStatus.validating, 'Validating server assets'),
+        downloading: text(configuredStatus.downloading, 'Downloading server assets'),
+        dataFiles: text(configuredStatus.dataFiles, 'Loading game data'),
+        scripts: text(configuredStatus.scripts, 'Starting client systems'),
+        complete: text(configuredStatus.complete, 'Server assets loaded; waiting for character menu')
     };
     const stages = {
         INIT_BEFORE_MAP_LOADED: status.initializing,
@@ -46,18 +56,21 @@
     let previewTimer;
 
     function setText(element, value) {
-        if (typeof value === 'string' && value.trim()) element.textContent = value.trim();
+        if (progress >= 100 && element === elements.status) value = status.complete;
+        const normalized = text(value, '', element === elements.subtitle || element === elements.tip ? 512 : 160);
+        if (normalized) element.textContent = normalized;
     }
 
     function safeImagePath(value) {
         if (typeof value !== 'string') return null;
         const path = value.trim();
-        if (!path || /["'();]/.test(path) || /^(?:https?:|data:|javascript:)/i.test(path)) return null;
+        if (path.length > 256 || !/^assets\/images\/[a-z0-9_-]+\.(?:png|jpe?g|webp|gif)$/i.test(path)) return null;
         return path;
     }
 
     function setProgress(fraction) {
-        const parsed = Number(fraction);
+        if (typeof fraction !== 'number') return;
+        const parsed = fraction;
         if (!Number.isFinite(parsed)) return;
         const next = Math.max(0, Math.min(100, Math.round(parsed * 100)));
         progress = Math.max(progress, next);
@@ -77,7 +90,7 @@
     }
 
     const tips = Array.isArray(config.tips)
-        ? config.tips.filter(tip => typeof tip === 'string' && tip.trim())
+        ? config.tips.slice(0, 64).map(tip => text(tip, '', 512)).filter(Boolean)
         : [];
     function showTip() {
         elements.tip.hidden = tips.length === 0;
@@ -89,7 +102,7 @@
     const configuredBackgrounds = Array.isArray(config.backgrounds)
         ? config.backgrounds
         : [config.background];
-    const backgrounds = configuredBackgrounds.map(safeImagePath).filter(Boolean);
+    const backgrounds = configuredBackgrounds.slice(0, 64).map(safeImagePath).filter(Boolean);
     const backdropLayers = Array.from(document.querySelectorAll('.backdrop'));
     const backgroundImages = Array.from(document.querySelectorAll('.background-image'));
     let backgroundIndex = config.randomizeFirstBackground !== false && backgrounds.length > 1
@@ -101,18 +114,40 @@
         if (backgroundImages[index]) backgroundImages[index].src = path;
     }
 
-    function rotateBackground() {
-        if (backgrounds.length < 2 || backdropLayers.length < 2) return;
-        backgroundIndex = (backgroundIndex + 1) % backgrounds.length;
-        const nextBackdrop = activeBackdrop === 0 ? 1 : 0;
+    let imageGeneration = 0;
+    let hasBackground = false;
+    const failedBackgrounds = new Set();
+    function requestBackground(index) {
+        const path = backgrounds[index];
+        if (!path || disposed) return;
+        const generation = ++imageGeneration;
         const image = new Image();
         image.addEventListener('load', () => {
-            setLayerBackground(nextBackdrop, backgrounds[backgroundIndex]);
-            backdropLayers[nextBackdrop].classList.add('is-active');
-            backdropLayers[activeBackdrop].classList.remove('is-active');
-            activeBackdrop = nextBackdrop;
+            if (disposed || generation !== imageGeneration) return;
+            const next = hasBackground ? 1 - activeBackdrop : activeBackdrop;
+            setLayerBackground(next, path);
+            backdropLayers[next].classList.add('is-active');
+            if (next !== activeBackdrop) backdropLayers[activeBackdrop].classList.remove('is-active');
+            activeBackdrop = next;
+            hasBackground = true;
         }, { once: true });
-        image.src = backgrounds[backgroundIndex];
+        image.addEventListener('error', () => {
+            if (disposed || generation !== imageGeneration) return;
+            failedBackgrounds.add(path);
+            // Try each candidate once when no usable image exists; keep the last good image otherwise.
+            if (!hasBackground) rotateBackground();
+        }, { once: true });
+        image.src = path;
+    }
+    function rotateBackground() {
+        if (!backgrounds.length || backdropLayers.length < 2) return;
+        for (let attempt = 0; attempt < backgrounds.length; attempt += 1) {
+            backgroundIndex = (backgroundIndex + 1) % backgrounds.length;
+            if (!failedBackgrounds.has(backgrounds[backgroundIndex])) {
+                requestBackground(backgroundIndex);
+                return;
+            }
+        }
     }
 
     function safeWebUrl(value) {
@@ -136,7 +171,7 @@
     setText(elements.eyebrow, config.eyebrow);
     setText(elements.title, config.title);
     setText(elements.subtitle, config.subtitle);
-    document.title = config.title || 'Feather Framework';
+    document.title = text(config.title, 'Feather Framework');
     setText(elements.status, status.connecting);
     if (typeof config.buildLabel === 'string' && config.buildLabel.trim()) {
         setText(elements.build, config.buildLabel);
@@ -151,33 +186,45 @@
     }
     const logo = safeImagePath(config.logo);
     if (logo) {
-        elements.logo.src = logo;
-        elements.logo.alt = typeof config.logoAlt === 'string' ? config.logoAlt : '';
+        elements.logo.alt = text(config.logoAlt);
         elements.logo.hidden = false;
         elements.logo.addEventListener('error', () => { elements.logo.hidden = true; }, { once: true });
+        elements.logo.src = logo;
     }
+
     if (backgrounds.length) {
-        backdropLayers.forEach((_, index) => setLayerBackground(index, backgrounds[backgroundIndex]));
+        requestBackground(backgroundIndex);
     }
-    if (typeof config.backgroundPosition === 'string'
+    if (typeof config.backgroundPosition === 'string' && config.backgroundPosition.length <= 64
         && /^[a-z\d.% -]+$/i.test(config.backgroundPosition)) {
         root.style.setProperty('--background-position', config.backgroundPosition);
     }
-    const opacity = Number(config.overlayOpacity);
+    const opacity = typeof config.overlayOpacity === 'number' ? config.overlayOpacity : NaN;
     if (Number.isFinite(opacity)) {
         root.style.setProperty('--overlay-opacity', String(Math.max(0, Math.min(1, opacity))));
     }
 
+    const labels = config.accessibility && typeof config.accessibility === 'object' ? config.accessibility : {};
+    elements.track.setAttribute('aria-label', text(labels.progress, 'Server asset loading progress'));
+    elements.links.setAttribute('aria-label', text(labels.community, 'Community links'));
+    setText(elements.discord, text(labels.discord, 'Discord'));
+    setText(elements.website, text(labels.website, 'Website'));
+    elements.tip.setAttribute('data-label', text(labels.tip, 'Tip'));
+    root.setAttribute('lang', /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(config.language) ? config.language : 'en');
+    function applyMotion() {
+        reducedMotion = config.reducedMotion === true || (config.reducedMotion !== false && !!(media && media.matches));
+        root.setAttribute('data-reduced-motion', String(reducedMotion));
+        if (tipTimer) window.clearInterval(tipTimer);
+        if (backgroundTimer) window.clearInterval(backgroundTimer);
+        tipTimer = backgroundTimer = undefined;
+        if (!disposed && !reducedMotion) {
+            if (tips.length > 1) tipTimer = window.setInterval(showTip, interval(config.tipIntervalMs, 9000));
+            if (backgrounds.length > 1) backgroundTimer = window.setInterval(rotateBackground, interval(config.backgroundIntervalMs, 12000));
+        }
+    }
     showTip();
-    if (tips.length > 1) {
-        tipTimer = window.setInterval(showTip, Math.max(5000, Number(config.tipIntervalMs) || 9000));
-    }
-    if (backgrounds.length > 1) {
-        backgroundTimer = window.setInterval(
-            rotateBackground,
-            Math.max(5000, Number(config.backgroundIntervalMs) || 12000)
-        );
-    }
+    applyMotion();
+    if (media && media.addEventListener) media.addEventListener('change', applyMotion);
 
     window.addEventListener('message', event => {
         const data = event.data;
@@ -220,6 +267,9 @@
     }
 
     window.addEventListener('beforeunload', () => {
+        disposed = true;
+        imageGeneration += 1;
+        if (media && media.removeEventListener) media.removeEventListener('change', applyMotion);
         if (tipTimer) window.clearInterval(tipTimer);
         if (backgroundTimer) window.clearInterval(backgroundTimer);
         if (previewTimer) window.clearInterval(previewTimer);

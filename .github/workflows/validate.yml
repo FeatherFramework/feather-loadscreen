@@ -27,6 +27,11 @@ jobs:
 
       - name: Test configuration and UI behavior
         run: |
-          node tests/config.test.js
-          node tests/ui.test.js
-          node tests/lifecycle.test.js
+          node --test tests/*.test.js
+
+      - name: Test Lua lifecycle behavior
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.4
+          luac5.4 -p config.lua client/main.lua tests/lifecycle.lua
+          lua5.4 tests/lifecycle.lua

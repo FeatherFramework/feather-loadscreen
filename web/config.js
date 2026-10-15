@@ -1,6 +1,10 @@
 // Server-owner presentation settings. Background paths are relative to index.html.
 // Put additional backgrounds in assets/images so the manifest packages them.
 window.FeatherLoadscreenConfig = {
+    language: 'en',
+    reducedMotion: 'auto', // true: always reduce; false: allow motion; auto: OS preference
+    accessibility: { progress: 'Server asset loading progress', community: 'Community links',
+        discord: 'Discord', website: 'Website', tip: 'Tip' },
     eyebrow: 'Feather Framework',
     title: 'Welcome to the Frontier',
     subtitle: 'Your story is about to begin.',
@@ -33,7 +37,7 @@ window.FeatherLoadscreenConfig = {
         downloading: 'Downloading server assets',
         dataFiles: 'Loading game data',
         scripts: 'Starting client systems',
-        complete: 'Entering the frontier'
+        complete: 'Server assets loaded; waiting for character menu'
     },
     tipIntervalMs: 9000,
     tips: [

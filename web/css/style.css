@@ -159,7 +159,7 @@ h1 {
 }
 
 .tip::before {
-    content: "Tip  ";
+    content: attr(data-label) "  ";
     color: var(--accent);
     font-family: Arial, Helvetica, sans-serif;
     font-size: 0.7rem;
@@ -216,9 +216,9 @@ h1 {
     .tip { display: none; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        transition-duration: 0.01ms !important;
-    }
-}
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after { animation: none !important; transition: none !important; }
+.community-links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.loading-card { max-height: calc(100vh - 4rem); overflow-y: auto; overflow-wrap: anywhere; }
+[hidden] { display: none !important; }
